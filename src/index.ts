@@ -1,14 +1,11 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { CloudAdapter, ConfigurationBotFrameworkAuthentication, TurnContext } from "botbuilder";
+import { BotFrameworkAdapter, TurnContext } from "botbuilder";
 import { ValChatBot } from "./bot";
 
-const botAuth = new ConfigurationBotFrameworkAuthentication({
-  MicrosoftAppId: process.env.MicrosoftAppId,
-  MicrosoftAppPassword: process.env.MicrosoftAppPassword,
-  MicrosoftAppType: "MultiTenant",
+const adapter = new BotFrameworkAdapter({
+  appId: process.env.MicrosoftAppId || "",
+  appPassword: process.env.MicrosoftAppPassword || "",
 });
-
-const adapter = new CloudAdapter(botAuth);
 
 adapter.onTurnError = async (context: TurnContext, error: Error) => {
   console.error("Bot turn error:", error);
@@ -28,26 +25,23 @@ app.http("messages", {
     const headers: Record<string, string> = {};
     req.headers.forEach((value, key) => { headers[key] = value; });
 
-    let statusCode = 200;
-    let responseBody = "";
+    return new Promise((resolve) => {
+      const mockReq = { body, headers };
 
-    const mockRes = {
-      status(code: number) { statusCode = code; return this; },
-      setHeader(_key: string, _value: string) { return this; },
-      end(data?: string) { responseBody = data || ""; },
-    };
+      const mockRes = {
+        statusCode: 200,
+        setHeader: (_key: string, _value: string) => {},
+        end: (data?: string) => {
+          resolve({ status: mockRes.statusCode, body: data || "" });
+        },
+      };
 
-    const mockReq = { body, headers, method: "POST" };
-
-    try {
-      await adapter.process(mockReq as any, mockRes as any, async (turnContext: TurnContext) => {
+      adapter.processActivity(mockReq as any, mockRes as any, async (turnContext: TurnContext) => {
         await bot.run(turnContext);
+      }).catch((err) => {
+        context.error("processActivity error:", err);
+        resolve({ status: 500, body: String(err) });
       });
-    } catch (err) {
-      context.error("Adapter error:", err);
-      return { status: 500, body: String(err) };
-    }
-
-    return { status: statusCode, body: responseBody };
+    });
   },
 });
