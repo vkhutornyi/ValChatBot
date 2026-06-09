@@ -28,14 +28,26 @@ app.http("messages", {
     const headers: Record<string, string> = {};
     req.headers.forEach((value, key) => { headers[key] = value; });
 
-    await adapter.process(
-      { body, headers, method: "POST" } as any,
-      {} as any,
-      async (turnContext: TurnContext) => {
-        await bot.run(turnContext);
-      }
-    );
+    let statusCode = 200;
+    let responseBody = "";
 
-    return { status: 200 };
+    const mockRes = {
+      status(code: number) { statusCode = code; return this; },
+      setHeader(_key: string, _value: string) { return this; },
+      end(data?: string) { responseBody = data || ""; },
+    };
+
+    const mockReq = { body, headers, method: "POST" };
+
+    try {
+      await adapter.process(mockReq as any, mockRes as any, async (turnContext: TurnContext) => {
+        await bot.run(turnContext);
+      });
+    } catch (err) {
+      context.error("Adapter error:", err);
+      return { status: 500, body: String(err) };
+    }
+
+    return { status: statusCode, body: responseBody };
   },
 });
