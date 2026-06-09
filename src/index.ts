@@ -20,7 +20,7 @@ const bot = new ValChatBot();
 app.http("messages", {
   methods: ["POST"],
   authLevel: "anonymous",
-  route: "api/messages",
+  route: "messages",
   handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     context.log("Received message from Teams");
 
