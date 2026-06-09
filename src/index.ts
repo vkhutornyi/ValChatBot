@@ -1,15 +1,17 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { BotFrameworkAdapter } from "botbuilder";
+import { CloudAdapter, ConfigurationBotFrameworkAuthentication, TurnContext } from "botbuilder";
 import { ValChatBot } from "./bot";
 
-const adapter = new BotFrameworkAdapter({
-  appId: process.env.MicrosoftAppId,
-  appPassword: process.env.MicrosoftAppPassword,
+const botAuth = new ConfigurationBotFrameworkAuthentication({
+  MicrosoftAppId: process.env.MicrosoftAppId,
+  MicrosoftAppPassword: process.env.MicrosoftAppPassword,
+  MicrosoftAppType: "MultiTenant",
 });
 
-adapter.onTurnError = async (context, error) => {
+const adapter = new CloudAdapter(botAuth);
+
+adapter.onTurnError = async (context: TurnContext, error: Error) => {
   console.error("Bot turn error:", error);
-  await context.sendTraceActivity("OnTurnError", `${error}`, "https://www.botframework.com/schemas/error", "TurnError");
   await context.sendActivity("The bot encountered an error. Please try again.");
 };
 
@@ -20,29 +22,20 @@ app.http("messages", {
   authLevel: "anonymous",
   route: "api/messages",
   handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    context.log("Received message from Teams");
+
     const body = await req.text();
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => { headers[key] = value; });
 
-    return new Promise((resolve) => {
-      const mockReq = {
-        body: Buffer.from(body),
-        headers: Object.fromEntries(req.headers.entries()),
-      };
-
-      const mockRes = {
-        statusCode: 200,
-        body: "",
-        setHeader: () => {},
-        end: (data?: string) => {
-          resolve({ status: mockRes.statusCode, body: data || mockRes.body });
-        },
-      };
-
-      adapter.processActivity(mockReq as any, mockRes as any, async (turnContext) => {
+    await adapter.process(
+      { body, headers, method: "POST" } as any,
+      {} as any,
+      async (turnContext: TurnContext) => {
         await bot.run(turnContext);
-      }).catch((err) => {
-        context.error("processActivity error:", err);
-        resolve({ status: 500, body: "Internal Server Error" });
-      });
-    });
+      }
+    );
+
+    return { status: 200 };
   },
 });
