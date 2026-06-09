@@ -26,7 +26,13 @@ app.http("messages", {
     req.headers.forEach((value, key) => { headers[key] = value; });
 
     return new Promise((resolve) => {
-      const mockReq = { body, headers };
+      let parsedBody: unknown;
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        parsedBody = body;
+      }
+      const mockReq = { body: parsedBody, headers };
 
       const mockRes = {
         statusCode: 200,
