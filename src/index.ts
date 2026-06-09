@@ -5,6 +5,7 @@ import { ValChatBot } from "./bot";
 const adapter = new BotFrameworkAdapter({
   appId: process.env.MicrosoftAppId || "",
   appPassword: process.env.MicrosoftAppPassword || "",
+  channelAuthTenant: process.env.MicrosoftAppTenantId || "common",
 });
 
 adapter.onTurnError = async (context: TurnContext, error: Error) => {
