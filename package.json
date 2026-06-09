@@ -2,7 +2,7 @@
   "name": "valchatbot",
   "version": "1.0.0",
   "description": "ValChatBot - Teams bot powered by Groq AI",
-  "main": "dist/{index,**/index}.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
