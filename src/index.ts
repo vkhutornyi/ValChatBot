@@ -30,8 +30,12 @@ app.http("messages", {
 
       const mockRes = {
         statusCode: 200,
-        setHeader: (_key: string, _value: string) => {},
+        status: (code: number) => { mockRes.statusCode = code; return mockRes; },
+        setHeader: (_key: string, _value: string) => { return mockRes; },
         end: (data?: string) => {
+          resolve({ status: mockRes.statusCode, body: data || "" });
+        },
+        send: (data?: string) => {
           resolve({ status: mockRes.statusCode, body: data || "" });
         },
       };
